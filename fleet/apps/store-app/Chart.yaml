@@ -1,0 +1,4 @@
+apiVersion: v2
+name: store-app
+description: Sample store application
+version: 1.0.0

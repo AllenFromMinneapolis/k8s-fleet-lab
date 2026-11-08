@@ -1,0 +1,17 @@
+# Our company rules, enforced by Kyverno
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: policies
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.targetRevision }}
+    path: fleet/policies
+  {{- include "fleet.syncPolicy" . | nindent 2 }}

@@ -1,0 +1,10 @@
+# Breaks BOTH policies on purpose: no 'team' label and uses ':latest'.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bad-pod
+  namespace: store-apps
+spec:
+  containers:
+    - name: web
+      image: nginx:latest

@@ -1,0 +1,18 @@
+# The "golden template" every store cluster is built from.
+# create-cluster.sh fills in the name and region; everything else is identical.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: store-template
+servers: 1
+agents: 0
+image: rancher/k3s:v1.35.5-k3s1
+network: fleet-lab
+options:
+  k3s:
+    extraArgs:
+      - arg: --disable=traefik
+        nodeFilters: [server:*]
+  kubeconfig:
+    updateDefaultKubeconfig: true
+    switchCurrentContext: true

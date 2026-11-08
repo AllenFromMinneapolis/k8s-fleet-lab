@@ -1,0 +1,15 @@
+apiVersion: external-secrets.io/v1
+kind: ClusterSecretStore
+metadata:
+  name: central-vault
+spec:
+  provider:
+    vault:
+      server: http://fleet-vault:8200
+      path: secret
+      version: v2
+      auth:
+        tokenSecretRef:
+          name: vault-token
+          namespace: external-secrets
+          key: token

@@ -1,0 +1,5 @@
+# Filled in per cluster by scripts/create-cluster.sh
+repoURL: https://github.com/CHANGE-ME/k8s-fleet-lab.git
+targetRevision: main
+clusterName: store-000
+region: none

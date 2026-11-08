@@ -1,0 +1,22 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-team-label
+  annotations:
+    policies.kyverno.io/description: Every workload in store-apps must say which team owns it.
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+    - name: check-team-label
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [store-apps]
+      validate:
+        message: "Policy: every pod needs a 'team' label (e.g. team: store-ops)."
+        pattern:
+          metadata:
+            labels:
+              team: "?*"

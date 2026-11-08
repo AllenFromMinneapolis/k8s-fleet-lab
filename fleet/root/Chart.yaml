@@ -1,0 +1,4 @@
+apiVersion: v2
+name: fleet-root
+description: App-of-apps. Everything a store cluster gets, defined once.
+version: 1.0.0

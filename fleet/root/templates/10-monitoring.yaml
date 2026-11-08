@@ -1,0 +1,38 @@
+# Prometheus + Grafana
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 93.1.0
+    helm:
+      valuesObject:
+        alertmanager:
+          enabled: false
+        kubeEtcd:
+          enabled: false
+        kubeControllerManager:
+          enabled: false
+        kubeScheduler:
+          enabled: false
+        kubeProxy:
+          enabled: false
+        prometheus:
+          prometheusSpec:
+            retention: 6h
+            externalLabels:
+              cluster: {{ .Values.clusterName }}
+              region: {{ .Values.region }}
+        grafana:
+          adminPassword: fleetlab
+  {{- include "fleet.syncPolicy" . | nindent 2 }}
