@@ -27,6 +27,11 @@ spec:
           enabled: false
         kubeProxy:
           enabled: false
+        prometheusOperator:
+          admissionWebhooks:
+            enabled: false
+          tls:
+            enabled: false
         prometheus:
           prometheusSpec:
             retention: 6h
