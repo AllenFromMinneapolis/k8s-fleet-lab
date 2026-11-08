@@ -1,0 +1,22 @@
+# Settings for the Argo CD that create-cluster.sh installs in every cluster.
+configs:
+  params:
+    server.insecure: true
+  cm:
+    # Lets the parent "root" app wait for each wave (e.g. Kyverno) to be healthy
+    # before the next wave (e.g. the policies) is applied.
+    resource.customizations.health.argoproj.io_Application: |
+      hs = {}
+      hs.status = "Progressing"
+      hs.message = ""
+      if obj.status ~= nil and obj.status.health ~= nil then
+        hs.status = obj.status.health.status
+        if obj.status.health.message ~= nil then
+          hs.message = obj.status.health.message
+        end
+      end
+      return hs
+dex:
+  enabled: false
+notifications:
+  enabled: false

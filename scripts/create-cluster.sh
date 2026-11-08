@@ -25,8 +25,7 @@ helm repo add argo https://argoproj.github.io/argo-helm >/dev/null 2>&1 || true
 helm repo update argo >/dev/null
 helm upgrade --install --kube-context "$CTX" argocd argo/argo-cd --version 10.17.0 \
   -n argocd --create-namespace --wait --timeout 10m \
-  --set 'configs.params.server\.insecure=true' \
-  --set dex.enabled=false --set notifications.enabled=false >/dev/null
+  -f bootstrap/argocd-values.yaml >/dev/null
 
 echo ">> 3/4 Giving the cluster its Vault token"
 kubectl create namespace external-secrets --dry-run=client -o yaml | kubectl --context "$CTX" apply -f - >/dev/null
