@@ -49,3 +49,10 @@ cluster picks it up within about 3 minutes.
 
 Vault runs in dev mode with the token `root`, and the passwords are simple. That's fine
 on a laptop, never in production.
+
+## If something goes wrong
+
+- A third cluster never becomes ready ("Waiting for containerd startup" in
+  `docker logs k3d-<name>-server-0`): the Docker VM has run out of inotify instances.
+  Two clusters is plenty for this lab. Delete the extra one with `k3d cluster delete <name>`.
+- An Argo CD app shows `Unknown`: in Argo CD click the app, then **Refresh > Hard Refresh**.
