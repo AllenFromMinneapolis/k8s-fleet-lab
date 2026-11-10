@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
-# Opens Argo CD, Grafana and the store app for one cluster. Ctrl+C to stop.
+# Opens Argo CD, Grafana, Prometheus and the store app for one cluster. Ctrl+C to stop.
+# Argo CD uses 8082 because Jenkins often has 8080. Change with: ARGO_PORT=8090 ./scripts/open-ui.sh store-001
 set -euo pipefail
 NAME="${1:?usage: open-ui.sh <name>}"
 CTX="k3d-$NAME"
+ARGO_PORT="${ARGO_PORT:-8082}"
 PW=$(kubectl --context "$CTX" -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)
-kubectl --context "$CTX" -n argocd port-forward svc/argocd-server 8080:80 >/dev/null 2>&1 &
+kubectl --context "$CTX" -n argocd port-forward svc/argocd-server "$ARGO_PORT":80 >/dev/null 2>&1 &
 kubectl --context "$CTX" -n monitoring port-forward svc/monitoring-grafana 3000:80 >/dev/null 2>&1 &
 kubectl --context "$CTX" -n monitoring port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090 >/dev/null 2>&1 &
 kubectl --context "$CTX" -n store-apps port-forward svc/store-app 8081:80 >/dev/null 2>&1 &
 trap 'kill $(jobs -p) 2>/dev/null' EXIT
-echo "Argo CD    http://localhost:8080   user: admin   password: $PW"
+echo "Argo CD    http://localhost:$ARGO_PORT   user: admin   password: $PW"
 echo "Grafana    http://localhost:3000   user: admin   password: fleetlab"
 echo "Prometheus http://localhost:9090   (no login)"
 echo "Store app  http://localhost:8081"

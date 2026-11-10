@@ -13,6 +13,16 @@ fi
 BRANCH="${BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
 echo ">> Cluster $NAME (region $REGION) will follow $REPO_URL @ $BRANCH"
 
+# Each cluster needs about 3.5 GB. Stop before a second one starves the first (FORCE=1 to skip).
+EXISTING=$(k3d cluster list --no-headers 2>/dev/null | awk -v n="$NAME" '$1!=n' | grep -c . || true)
+MEM_GB=$(( $(docker info --format '{{.MemTotal}}') / 1024 / 1024 / 1024 ))
+if [ "${FORCE:-0}" != 1 ] && [ "$EXISTING" -ge 1 ] && [ "$MEM_GB" -lt 11 ]; then
+  echo "!! Docker Desktop has ${MEM_GB} GB and $EXISTING cluster(s) already running."
+  echo "!! Another cluster needs about 12 GB total. Raise Docker memory, delete a cluster"
+  echo "!! (k3d cluster delete <name>), or run with FORCE=1 to try anyway."
+  exit 1
+fi
+
 docker ps --format '{{.Names}}' | grep -qx fleet-vault || ./scripts/start-vault.sh
 
 echo ">> 1/4 Creating K3s cluster from cluster-template/k3d-cluster.yaml"
