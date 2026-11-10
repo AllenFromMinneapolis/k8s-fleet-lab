@@ -28,6 +28,12 @@ spec:
         kubeProxy:
           enabled: false
         prometheusOperator:
+          # v0.95.1 (chart default) only publishes amd64 images; v0.95.2 also has arm64 (Apple silicon).
+          image:
+            tag: v0.95.2
+          prometheusConfigReloader:
+            image:
+              tag: v0.95.2
           admissionWebhooks:
             enabled: false
           tls:
