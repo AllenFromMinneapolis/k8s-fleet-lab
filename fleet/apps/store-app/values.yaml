@@ -2,4 +2,4 @@ clusterName: store-000
 region: none
 replicas: 2
 image: nginx:1.27-alpine
-message: "Hello from the fleet"
+message: "Hello from Allen's fleet v2"
