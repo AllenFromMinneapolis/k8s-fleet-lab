@@ -14,5 +14,5 @@ cd "$(dirname "$0")/.."
 
 echo
 echo "Argo CD needs about 10 more minutes to install everything from Git."
-echo "Check progress with:  ./scripts/status.sh   (want 7/7 and 2/2)"
+echo "Check progress with:  ./scripts/status.sh   (want 10/10 and 2/2)"
 echo "Then open the screens: ./scripts/open-ui.sh store-001"

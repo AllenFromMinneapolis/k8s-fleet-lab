@@ -15,7 +15,9 @@ Runs on Docker Desktop (Mac, including Apple silicon). No cloud account needed.
 | Policy | Kyverno (`fleet/policies`) | Company rules enforced automatically |
 | Secrets | HashiCorp Vault + External Secrets (`fleet/secret-store`) | One central Vault; clusters fetch secrets, nothing is stored in Git |
 | Monitoring | Prometheus + Grafana (kube-prometheus-stack) | Health and metrics for every cluster |
+| Telemetry | OpenTelemetry Collector + Grafana Tempo (`fleet/root/templates/20-otel.yaml`, `fleet/otel`) | Apps send metrics and traces to one agent, which forwards them |
 | The app | `fleet/apps/store-app` | The business app each store runs |
+| Instrumented app | `fleet/apps/orders-app` (Python + OpenTelemetry) | An API that sends its own metrics and traces |
 
 How it fits together:
 
@@ -37,7 +39,7 @@ Central Vault (Docker)  <----  External Secrets in each cluster fetches the API 
 ```
 cd ~/Documents/k8s-fleet-lab
 ./scripts/up.sh                                # builds store-001 (about 5 minutes)
-./scripts/status.sh                            # after ~10 minutes: 7/7 apps, 2/2 pods
+./scripts/status.sh                            # after ~10 minutes: 10/10 apps, 2/2 pods
 ./scripts/open-ui.sh store-001                 # links + logins; leave it running
 kubectl --context k3d-store-001 apply -f examples/bad-pod.yaml   # Kyverno blocks it
 ./scripts/delete-everything.sh                 # clean up
@@ -84,6 +86,22 @@ when Docker has less than about 12 GB (`FORCE=1` to try anyway).
    change the `message` line and commit. Within about 3 minutes (or click Refresh in
    Argo CD) Argo CD shows the new commit code and http://localhost:8081 shows the new
    text. With more stores, every one of them updates.
+6. **OpenTelemetry.** Grafana > Dashboards > **Orders app (OpenTelemetry)**. Top row:
+   request rate, p95 latency and error % (from auto-instrumentation). Middle row: orders
+   per minute and average order value (custom metrics in the code). Bottom: click any
+   Trace ID to see one request step by step (`check_inventory`, `charge_card`). The
+   `orders-shopper` pod sends about one order a second, so there is always data.
+   Free-form: Grafana > Explore > Tempo > TraceQL `{status = error}`.
+
+   How the data flows:
+   ```
+   orders-app (Python)  --OTLP-->  OTel Collector (otel namespace)  --> Tempo       (traces)
+     app/app.py                     20-otel.yaml                    --> Prometheus  (metrics, scrapes :8889)
+                                                                    Grafana reads both
+   ```
+   The code to read: `fleet/apps/orders-app/app/app.py` (spans and metrics),
+   `fleet/apps/orders-app/templates/all.yaml` (the `OTEL_*` settings) and
+   `fleet/root/templates/20-otel.yaml` (the Collector's receivers, processors, exporters).
 
 ## Lab only
 
