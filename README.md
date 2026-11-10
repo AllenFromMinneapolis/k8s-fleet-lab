@@ -126,3 +126,10 @@ on a laptop, never in production.
   `docker logs k3d-<name>-server-0`): the Docker VM has run out of inotify instances.
   Two clusters is plenty for this lab. Delete the extra one with `k3d cluster delete <name>`.
 - An Argo CD app shows `Unknown`: in Argo CD click the app, then **Refresh > Hard Refresh**.
+- Grafana trace boxes say **"Datasource tempo was not found"**: Grafana missed the Tempo
+  setting (usually because the cluster was overloaded while it installed). Make Argo CD
+  re-apply it, then restart Grafana and its port-forward:
+  ```
+  kubectl --context k3d-store-001 -n argocd annotate application monitoring argocd.argoproj.io/refresh=hard --overwrite
+  kubectl --context k3d-store-001 -n monitoring rollout restart deploy/monitoring-grafana
+  ```
