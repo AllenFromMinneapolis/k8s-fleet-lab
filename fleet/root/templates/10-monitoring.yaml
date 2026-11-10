@@ -46,4 +46,10 @@ spec:
               region: {{ .Values.region }}
         grafana:
           adminPassword: fleetlab
+          additionalDataSources:
+            - name: Tempo
+              type: tempo
+              uid: tempo
+              access: proxy
+              url: http://tempo.otel.svc:3200
   {{- include "fleet.syncPolicy" . | nindent 2 }}

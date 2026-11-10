@@ -1,0 +1,4 @@
+apiVersion: v2
+name: orders-app
+description: Small store "orders" API instrumented with OpenTelemetry
+version: 1.0.0

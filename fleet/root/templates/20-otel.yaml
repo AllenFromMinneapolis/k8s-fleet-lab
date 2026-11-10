@@ -1,0 +1,95 @@
+# OpenTelemetry Collector: the "agent" apps send telemetry to.
+# Traces go to Tempo; metrics are exposed for Prometheus to scrape.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: otel-collector
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: otel
+  source:
+    repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+    chart: opentelemetry-collector
+    targetRevision: 0.178.2
+    helm:
+      valuesObject:
+        fullnameOverride: otel-collector
+        mode: deployment
+        image:
+          repository: otel/opentelemetry-collector-contrib
+          tag: 0.163.2
+        presets:
+          kubernetesAttributes:
+            enabled: true
+        resources:
+          limits:
+            memory: 256Mi
+        ports:
+          jaeger-compact:
+            enabled: false
+          jaeger-thrift:
+            enabled: false
+          jaeger-grpc:
+            enabled: false
+          zipkin:
+            enabled: false
+          prom-export:
+            enabled: true
+            containerPort: 8889
+            servicePort: 8889
+            protocol: TCP
+        serviceMonitor:
+          enabled: true
+          metricsEndpoints:
+            - port: prom-export
+              interval: 15s
+          extraLabels:
+            release: monitoring
+        config:
+          receivers:
+            jaeger: null
+            zipkin: null
+            prometheus: null
+          exporters:
+            otlp_grpc/tempo:
+              endpoint: tempo.otel.svc:4317
+              tls:
+                insecure: true
+            prometheus:
+              endpoint: ${env:MY_POD_IP}:8889
+          service:
+            pipelines:
+              traces:
+                receivers: [otlp]
+                processors: [memory_limiter, k8s_attributes, batch]
+                exporters: [otlp_grpc/tempo]
+              metrics:
+                receivers: [otlp]
+                processors: [memory_limiter, k8s_attributes, batch]
+                exporters: [prometheus]
+              logs: null
+  {{- include "fleet.syncPolicy" . | nindent 2 }}
+---
+# Tempo (trace storage) and the Grafana dashboard for the orders app
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tracing
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: otel
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.targetRevision }}
+    path: fleet/otel
+  {{- include "fleet.syncPolicy" . | nindent 2 }}
