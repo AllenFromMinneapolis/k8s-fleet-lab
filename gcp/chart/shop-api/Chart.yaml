@@ -1,0 +1,4 @@
+apiVersion: v2
+name: shop-api
+description: Product-search API with OpenTelemetry, reading its key from Google Secret Manager
+version: 1.0.0

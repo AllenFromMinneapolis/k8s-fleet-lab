@@ -1,0 +1,7 @@
+image:
+  repository: us-central1-docker.pkg.dev/PROJECT/apps/shop-api   # set by the pipeline
+  tag: ""                                                          # set by the pipeline (Git commit)
+# Full Secret Manager name, e.g. projects/my-project/secrets/shop-api-key/versions/latest
+secretName: ""
+otlpEndpoint: http://otel-collector.otel.svc:4318
+replicas: 2

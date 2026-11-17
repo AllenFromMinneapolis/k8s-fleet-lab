@@ -1,0 +1,90 @@
+# Secure delivery pipeline for gcp/: scan code, secrets, IaC and the image, then deploy to GKE.
+# Pull requests only scan. Pushes to main also deploy, once the GCP_* repo variables exist.
+name: gcp-secure-pipeline
+
+on:
+  push:
+    branches: [main]
+    paths: ["gcp/**", ".github/workflows/gcp-secure-pipeline.yml"]
+  pull_request:
+    paths: ["gcp/**", ".github/workflows/gcp-secure-pipeline.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+  IMAGE: ${{ vars.GCP_REGION || 'us-central1' }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/apps/shop-api
+
+jobs:
+  scan:
+    name: Security scans
+    runs-on: ubuntu-latest
+    steps:
+      # Actions are pinned to full commit SHAs so a moved tag can't inject code (supply chain).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: gcp/app/go.mod
+          cache-dependency-path: gcp/app/go.sum
+      - name: SAST - gosec (insecure Go code, e.g. SQL injection)
+        working-directory: gcp/app
+        run: go run github.com/securego/gosec/v2/cmd/gosec@v2.30.0 ./...
+      - name: SCA - govulncheck (known-vulnerable dependencies actually called)
+        working-directory: gcp/app
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+      - name: Secrets - gitleaks (passwords and keys committed to Git)
+        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo --redact --verbose
+      - name: IaC - trivy config (Terraform and Helm misconfigurations)
+        run: docker run --rm -v "$PWD:/src" aquasec/trivy:0.76.2 config --exit-code 1 --severity HIGH,CRITICAL --ignorefile /src/gcp/.trivyignore /src/gcp
+
+  build-deploy:
+    name: Build, scan image, deploy
+    needs: scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # lets GitHub issue a short-lived OIDC token that GCP trusts (no stored keys)
+    env:
+      DEPLOY: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.GCP_PROJECT_ID != '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build image
+        run: docker build -t "$IMAGE:${{ github.sha }}" gcp/app
+      - name: Image scan - trivy (fail on fixable HIGH/CRITICAL CVEs)
+        run: >
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.76.2
+          image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "$IMAGE:${{ github.sha }}"
+      - name: Log in to GCP with Workload Identity Federation
+        if: env.DEPLOY == 'true'
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+        if: env.DEPLOY == 'true'
+      - name: Push image to Artifact Registry
+        if: env.DEPLOY == 'true'
+        run: |
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+          docker push "$IMAGE:${{ github.sha }}"
+      - uses: google-github-actions/get-gke-credentials@3da1e46a907576cefaa90c484278bb5b259dd395 # v3.0.0
+        if: env.DEPLOY == 'true'
+        with:
+          cluster_name: shop-lab
+          location: ${{ env.REGION }}
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
+        if: env.DEPLOY == 'true'
+      - name: Deploy OTel Collector and shop-api with Helm
+        if: env.DEPLOY == 'true'
+        run: |
+          helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+          helm upgrade --install otel-collector open-telemetry/opentelemetry-collector --version 0.178.2 \
+            -n otel --create-namespace -f gcp/otel-collector-values.yaml --wait --timeout 10m
+          helm upgrade --install shop-api gcp/chart/shop-api -n shop --create-namespace \
+            --set image.repository="$IMAGE" --set image.tag="${{ github.sha }}" \
+            --set secretName="projects/${{ vars.GCP_PROJECT_ID }}/secrets/shop-api-key/versions/latest" \
+            --wait --timeout 10m

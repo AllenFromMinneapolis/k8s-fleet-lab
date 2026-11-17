@@ -1,0 +1,48 @@
+# OpenTelemetry Collector on GKE: same receivers as the home lab, different exporters.
+# Traces -> Google Cloud Trace, metrics -> Google Managed Service for Prometheus.
+mode: deployment
+fullnameOverride: otel-collector
+image:
+  repository: otel/opentelemetry-collector-contrib
+  tag: 0.163.2
+serviceAccount:
+  create: true
+  name: otel-collector   # Terraform gave "otel/otel-collector" permission to write traces and metrics
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 256Mi
+ports:
+  jaeger-compact:
+    enabled: false
+  jaeger-thrift:
+    enabled: false
+  jaeger-grpc:
+    enabled: false
+  zipkin:
+    enabled: false
+config:
+  receivers:
+    jaeger: null
+    zipkin: null
+    prometheus: null
+  processors:
+    resourcedetection:
+      detectors: [gcp]
+      timeout: 10s
+  exporters:
+    googlecloud: {}
+    googlemanagedprometheus: {}
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, resourcedetection, batch]
+        exporters: [googlecloud]
+      metrics:
+        receivers: [otlp]
+        processors: [memory_limiter, resourcedetection, batch]
+        exporters: [googlemanagedprometheus]
+      logs: null

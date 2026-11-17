@@ -1,0 +1,4 @@
+# Accepted risk, reviewed: GitHub-hosted runners have changing IPs, so an IP allow-list on the
+# GKE control plane would block deploys. Access still requires Google IAM (Workload Identity
+# Federation, limited to this repo's main branch). Production: private cluster + DNS endpoint.
+AVD-GCP-0061
