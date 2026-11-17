@@ -103,6 +103,14 @@ when Docker has less than about 12 GB (`FORCE=1` to try anyway).
    `fleet/apps/orders-app/templates/all.yaml` (the `OTEL_*` settings) and
    `fleet/root/templates/20-otel.yaml` (the Collector's receivers, processors, exporters).
 
+## Also in this repo: secure delivery on GCP
+
+[`gcp/`](gcp/README.md) is a second project: a Go API deployed to GKE Autopilot with
+Terraform, Helm and a GitHub Actions pipeline that runs gosec, govulncheck, gitleaks and
+Trivy before it deploys. It logs in with Workload Identity Federation (no stored keys), reads
+its API key from Secret Manager, and sends OpenTelemetry traces and metrics to Cloud Trace and
+Google Managed Service for Prometheus.
+
 ## Lab only
 
 Vault runs in dev mode with the token `root`, and the passwords are simple. That's fine
