@@ -56,6 +56,19 @@ Traces: Cloud console > Trace explorer. Metrics: Monitoring > Metrics explorer, 
 `"SELECT id, name, price FROM products WHERE name LIKE '%" + name + "%'"` and open a pull
 request. gosec fails the build with G202 (SQL string concatenation).
 
+## Up and down with one command
+
+```
+gcp/scripts/up.sh <PROJECT_ID>     # build or repair everything, about 10-15 min for a new cluster
+gcp/scripts/test.sh <PROJECT_ID>   # key check, SQL injection attempt, 401s, links to traces/metrics
+gcp/scripts/down.sh <PROJECT_ID>   # delete the cluster (the cost); keep registry, secret, GitHub login
+gcp/scripts/down.sh <PROJECT_ID> --all   # delete everything
+```
+
+`up.sh` checks billing, runs Terraform, adds the secret value if missing, and deploys the last
+image the pipeline built and scanned. After `--all`, Google keeps the deleted GitHub identity pool
+for 30 days and blocks re-creating it by name, so `up.sh` restores and re-imports it.
+
 ## Clean up (stops all charges)
 
 ```
