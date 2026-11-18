@@ -15,7 +15,7 @@ permissions:
 
 env:
   REGION: ${{ vars.GCP_REGION || 'us-central1' }}
-  IMAGE: ${{ vars.GCP_REGION || 'us-central1' }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/apps/shop-api
+  IMAGE: ${{ vars.GCP_REGION || 'us-central1' }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID || 'not-set' }}/apps/shop-api
 
 jobs:
   scan:
