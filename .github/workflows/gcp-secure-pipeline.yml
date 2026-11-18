@@ -73,14 +73,11 @@ jobs:
         run: |
           gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
           docker push "$IMAGE:${{ github.sha }}"
-      - uses: google-github-actions/get-gke-credentials@3da1e46a907576cefaa90c484278bb5b259dd395 # v3.0.0
+      - name: Connect kubectl to GKE
         if: env.DEPLOY == 'true'
-        with:
-          cluster_name: shop-lab
-          location: ${{ env.REGION }}
-          # Renew the short-lived token through gcloud instead of baking one into kubeconfig,
-          # so long Helm --wait steps don't fail with Unauthorized.
-          use_auth_provider: true
+        # gcloud writes a kubeconfig that uses gke-gcloud-auth-plugin, which renews the
+        # short-lived token, so long Helm --wait steps don't fail with Unauthorized.
+        run: gcloud container clusters get-credentials shop-lab --location "$REGION"
       - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
         if: env.DEPLOY == 'true'
       - name: Deploy OTel Collector and shop-api with Helm
