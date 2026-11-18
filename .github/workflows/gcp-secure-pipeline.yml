@@ -66,6 +66,8 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
       - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
         if: env.DEPLOY == 'true'
+        with:
+          install_components: gke-gcloud-auth-plugin
       - name: Push image to Artifact Registry
         if: env.DEPLOY == 'true'
         run: |
@@ -76,6 +78,9 @@ jobs:
         with:
           cluster_name: shop-lab
           location: ${{ env.REGION }}
+          # Renew the short-lived token through gcloud instead of baking one into kubeconfig,
+          # so long Helm --wait steps don't fail with Unauthorized.
+          use_auth_provider: true
       - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
         if: env.DEPLOY == 'true'
       - name: Deploy OTel Collector and shop-api with Helm
