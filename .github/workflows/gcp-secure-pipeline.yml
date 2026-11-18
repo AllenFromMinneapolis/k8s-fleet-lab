@@ -86,6 +86,10 @@ jobs:
           helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
           helm upgrade --install otel-collector open-telemetry/opentelemetry-collector --version 0.178.2 \
             -n otel --create-namespace -f gcp/otel-collector-values.yaml --wait --timeout 10m
+          # A cancelled run can leave the release stuck "pending"; clear it so this deploy can proceed.
+          case "$(helm status shop-api -n shop -o json 2>/dev/null | jq -r .info.status)" in
+            pending-*) helm rollback shop-api -n shop --wait || helm uninstall shop-api -n shop --wait ;;
+          esac
           helm upgrade --install shop-api gcp/chart/shop-api -n shop --create-namespace \
             --set image.repository="$IMAGE" --set image.tag="${{ github.sha }}" \
             --set secretName="projects/${{ vars.GCP_PROJECT_ID }}/secrets/shop-api-key/versions/latest" \
